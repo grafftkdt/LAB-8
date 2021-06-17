@@ -56,9 +56,8 @@ enum _Mode
 	Mode_Menu1 = 40,
 	Mode_Menu1Wait = 50
 };
-uint32_t CurrentMode = 0;
-uint32_t TimeStamp = 0;
-int LEDFrequency = 1;		//default frequency = 1 Hz
+uint32_t CurrentMode = 0;		// Main Menu
+int LEDFrequency = 1;			//default frequency = 1 Hz
 uint8_t LEDState = 1;			//default state = ON
 uint8_t ButtonStatus[2] = {0};
 
@@ -144,7 +143,7 @@ int main(void)
 	  	  		{
 	  	  				case Mode_MainMenu :
 	  	  				{
-	  	  					char temp[] = "MAIN MENU : \r\n"
+	  	  					char temp[] = "\r\nMAIN MENU : \r\n"
 											"---------------\r\n"
 											"MENU 0 : LED CONTROL\r\n"
 											"MENU 1 : BUTTON STATUS\r\n\r\n";
@@ -186,7 +185,7 @@ int main(void)
 	  	  				case Mode_Menu0 :
 	  	  				{
 	  	  					char temp[]="---------------\r\n"
-	  	  					"MENU0 : LED CONTROL\r\n"
+	  	  					"MENU 0 : LED CONTROL\r\n"
 	  	  					"---------------\r\n"
 							"a : Speed Up +1 Hz\r\n"
 							"s : Speed Down -1 Hz\r\n"
@@ -213,6 +212,10 @@ int main(void)
 
 	  	  					  	case 's' :
 	  	  					  		LEDFrequency -= 1;
+	  	  					  		if (LEDFrequency <= 0)
+	  	  					  		{
+	  	  					  			LEDFrequency = 0;
+	  	  					  		}
 									sprintf(temp, "Current Frequency : [%d]\r\n" , LEDFrequency);
 									HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 									CurrentMode = Mode_Menu0;
@@ -222,22 +225,27 @@ int main(void)
 	  	  					  		if (LEDState == 0)
 	  	  					  		{
 	  	  					  			LEDState = 1;
+	  	  					  			char temp[] = "\r\nLED State : ON\r\n";
+	  	  					  			HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  	  					  			CurrentMode = Mode_Menu0;
 	  	  					  			break;
 	  	  					  		}
 	  	  					  		else
 	  	  					  		{
 	  	  					  			LEDState = 0;
+	  	  					  			char temp[] = "\r\nLED State : OFF\r\n";
+	  	  					  			HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  	  					  			CurrentMode = Mode_Menu0;
 	  	  					  			break;
 	  	  					  		}
 
 	  	  					  	case 'x' :
 	  	  					  		CurrentMode = Mode_MainMenu;
+	  	  					  		break;
 
 	  	  					  	default :
 	  	  					  		{
-	  	  					  			char temp[] = "!!!ERROR!!!\r\n";
+	  	  					  			char temp[] = "\r\n\r\n!!!ERROR!!!\r\n\r\n";
 	  	  					  			HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  	  					  			CurrentMode = Mode_MainMenu;
 	  	  					  			break;
@@ -248,7 +256,7 @@ int main(void)
 	  	  				case Mode_Menu1 :
 	  	  				{
 	  	  					char temp[]="---------------\r\n"
-									"MENU1 : BUTTON STATUS\r\n"
+									"MENU 1 : BUTTON STATUS\r\n"
 									"---------------\r\n"
 									"x : back\r\n";
 	  	  					HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
@@ -268,7 +276,7 @@ int main(void)
 
 								default :
 								{
-									char temp[] = "!!!ERROR!!!\r\n";
+									char temp[] = "\r\n\r\n!!!ERROR!!!\r\n\r\n";
 									HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 									CurrentMode = Mode_MainMenu;
 									break;
@@ -279,16 +287,33 @@ int main(void)
 
 	  	  			}
 
-
-	  	  		ButtonStatus[1] = ButtonStatus[0];
-
-	  	  		if (LEDState && LEDFrequency != 0 && HAL_GetTick() - TimeStamp >= 500/LEDFrequency)
+	  	  		if (CurrentMode == 40)
 	  	  		{
-	  	  			TimeStamp = HAL_GetTick();
-
-	  	  			HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  	  			if (ButtonStatus[0] == 0 && ButtonStatus[1] == 1)
+	  	  			{
+	  	  				char temp[] = "Button Status : PRESS\r\n";
+	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  				CurrentMode = 40;
+	  	  			}
+	  	  			else if (ButtonStatus[0] == 1 && ButtonStatus[1] == 0)
+	  	  			{
+	  	  				char temp[] = "Button Status : UNPRESS\r\n";
+	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  				CurrentMode = 40;
+	  	  			}
 	  	  		}
 
+	  	  		if (LEDState == 1)
+	  	  		{
+	  	  			HAL_Delay(500/LEDFrequency);		//millisecond
+	  	  			HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  	  		}
+	  	  		else if (LEDState == 0)
+	  	  		{
+	  	  			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
+	  	  		}
+
+	  	  		ButtonStatus[1] = ButtonStatus[0];
 
     /* USER CODE END WHILE */
 
@@ -392,11 +417,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
