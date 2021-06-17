@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,19 +47,22 @@ UART_HandleTypeDef huart2;
 char TxDataBuffer[32] = { 0 };
 char RxDataBuffer[32] = { 0 };
 
-typedef enum
+enum _Mode
 {
-	Menu_Main,
-	Menu_Mode0,
-	Menu_Mode1
-
-} Mode ;
-Mode CurrentMode = Menu_Main;
-
+	Mode_MainMenu = 0,
+	Mode_MainMenuWait = 10,
+	Mode_Menu0 = 20,
+	Mode_Menu0Wait = 30,
+	Mode_Menu1 = 40,
+	Mode_Menu1Wait = 50
+};
+uint32_t CurrentMode = 0;
 uint32_t TimeStamp = 0;
-uint8_t LEDFrequency = 1;		//default frequency = 1 Hz
+int LEDFrequency = 1;		//default frequency = 1 Hz
 uint8_t LEDState = 1;			//default state = ON
 uint8_t ButtonStatus[2] = {0};
+
+char temp[100] = {0};
 
 /* USER CODE END PV */
 
@@ -108,13 +112,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  {
-	  char temp[] = "MAIN MENU : \r\n"
-	  	  	  		"---------------\r\n"
-	  	  	  		"MENU 0 : LED CONTROL\r\n"
-	  	  	  		"MENU 1 : BUTTON STATUS\r\n\r\n";
-	 HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-   }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,7 +121,8 @@ int main(void)
   {
 	  /*Method 1 Polling Mode*>>Bad Implement for Loop/
 
-	  	  //		UARTReceiveAndResponsePolling();
+	  	  		// UARTReceiveAndResponsePolling();
+
 
 	  	  		/*Method 2 Interrupt Mode*/
 	  	  		HAL_UART_Receive_IT(&huart2,  (uint8_t*)RxDataBuffer, 32);
@@ -131,56 +130,156 @@ int main(void)
 	  	  		/*Method 2 W/ 1 Char Received*/
 
 	  	  		//read charater
-	  	  		int16_t inputchar = UARTReceiveIT();
+	  	  	    int8_t inputchar = UARTReceiveIT();
 
 	  	  		//read button status
 	  	  		ButtonStatus[0] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
 
 	  	  		if (inputchar != -1)
 	  	  		{
-
 //	  	  			sprintf(TxDataBuffer, "ReceivedChar:[%c]\r\n", inputchar);
 //	  	  			HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
+	  	  		}
+	  	  		switch (CurrentMode)
+	  	  		{
+	  	  				case Mode_MainMenu :
+	  	  				{
+	  	  					char temp[] = "MAIN MENU : \r\n"
+											"---------------\r\n"
+											"MENU 0 : LED CONTROL\r\n"
+											"MENU 1 : BUTTON STATUS\r\n\r\n";
+	  	  					HAL_UART_Transmit(&huart2, (uint8_t*) temp,strlen(temp), 1000);
 
-	  	  			switch (CurrentMode)
-	  	  			{
-	  	  				case Menu_Main :
+	  	  					CurrentMode = Mode_MainMenuWait;
+	  	  					break;
+	  	  				}
 
-	  	  					if (inputchar == "0")
+	  	  				case Mode_MainMenuWait :
+	  	  					switch (inputchar)
 	  	  					{
-	  	  						CurrentMode = Menu_Mode0;
-	  	  						char temp[] = "MENU 0 : LED CONTROL\r\n"
-	  	  									"---------------\r\n"
-	  	  									"a : Speed Up +1 Hz\r\n"
-	  	  									"s : Speed Down -1 Hz\r\n"
-	  	  									"d : ON/OFF\r\n"
-	  	  									"x : back\r\n\r\n";
-	  	  						HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-	  	  						break;
-	  	  					}
 
-	  	  					else if (inputchar == "1")
-	  	  					{
-	  	  						CurrentMode = Menu_Mode1;
-	  	  						char temp[] = "MENU 1 : BUTTON STATUS\r\n"
-	  	  									"---------------\r\n"
-	  	  									"x : back\r\n\r\n";
-	  	  						HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-	  	  						break;
-	  	  					}
+	  	  						case -1 :	//no input
+	  	  							break;
 
-	  	  					else
-	  	  					{
-	  	  						char temp[] = "---------------\r\n"
-	  	  									"ERROR\r\n"
-	  	  									"---------------\r\n";
-	  	  						HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-	  	  						break;
+	  	  						case '0' :	//select mode 0
+	  	  						{
+	  	  							CurrentMode = Mode_Menu0;
+	  	  							break;
+	  	  						}
+
+	  	  						case '1' : //select mode 1
+	  	  						{
+	  	  							 CurrentMode = Mode_Menu1;
+	  	  							 break;
+	  	  						}
+
+	  	  						default :
+	  	  						{
+	  	  							char temp[] = "!!!ERROR!!!\r\n";
+	  	  							HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  							CurrentMode = Mode_MainMenu;
+	  	  							break;
+	  	  						}
 	  	  					}
+	  	  					break;
+
+	  	  				case Mode_Menu0 :
+	  	  				{
+	  	  					char temp[]="---------------\r\n"
+	  	  					"MENU0 : LED CONTROL\r\n"
+	  	  					"---------------\r\n"
+							"a : Speed Up +1 Hz\r\n"
+							"s : Speed Down -1 Hz\r\n"
+							"d : ON/OFF LED\r\n"
+							"x : back\r\n";
+	  	  					HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  					CurrentMode = Mode_Menu0Wait;
+	  	  					break;
+	  	  				}
+
+	  	  				case Mode_Menu0Wait	:
+	  	  					switch (inputchar)
+	  	  					{
+
+	  	  					  	case -1 :	//no input
+	  	  					  	  	break;
+
+	  	  					  	case 'a' :
+	  	  					  		LEDFrequency += 1;
+	  	  					  		sprintf(temp, "Current Frequency : [%d]\r\n" , LEDFrequency);
+	  	  					  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  					  		CurrentMode = Mode_Menu0;
+	  	  					  		break;
+
+	  	  					  	case 's' :
+	  	  					  		LEDFrequency -= 1;
+									sprintf(temp, "Current Frequency : [%d]\r\n" , LEDFrequency);
+									HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+									CurrentMode = Mode_Menu0;
+									break;
+
+	  	  					  	case 'd' :
+	  	  					  		if (LEDState == 0)
+	  	  					  		{
+	  	  					  			LEDState = 1;
+	  	  					  			CurrentMode = Mode_Menu0;
+	  	  					  			break;
+	  	  					  		}
+	  	  					  		else
+	  	  					  		{
+	  	  					  			LEDState = 0;
+	  	  					  			CurrentMode = Mode_Menu0;
+	  	  					  			break;
+	  	  					  		}
+
+	  	  					  	case 'x' :
+	  	  					  		CurrentMode = Mode_MainMenu;
+
+	  	  					  	default :
+	  	  					  		{
+	  	  					  			char temp[] = "!!!ERROR!!!\r\n";
+	  	  					  			HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  					  			CurrentMode = Mode_MainMenu;
+	  	  					  			break;
+	  	  					  		}
+	  	  					}
+	  	  					break;
+
+	  	  				case Mode_Menu1 :
+	  	  				{
+	  	  					char temp[]="---------------\r\n"
+									"MENU1 : BUTTON STATUS\r\n"
+									"---------------\r\n"
+									"x : back\r\n";
+	  	  					HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  	  					CurrentMode = Mode_Menu1Wait;
+	  	  					break;
+	  	  				}
+
+	  	  				case Mode_Menu1Wait:
+	  	  					switch(inputchar)
+	  	  					{
+  	  					  		case -1 :	//no input
+  	  					  			break;
+
+								case 'x':
+									CurrentMode = Mode_MainMenu;
+									break;
+
+								default :
+								{
+									char temp[] = "!!!ERROR!!!\r\n";
+									HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+									CurrentMode = Mode_MainMenu;
+									break;
+								}
+
+	  	  					}
+	  	  					break;
 
 	  	  			}
 
-	  	  		}
+
 	  	  		ButtonStatus[1] = ButtonStatus[0];
 
 	  	  		if (LEDState && LEDFrequency != 0 && HAL_GetTick() - TimeStamp >= 500/LEDFrequency)
@@ -189,6 +288,7 @@ int main(void)
 
 	  	  			HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 	  	  		}
+
 
     /* USER CODE END WHILE */
 
@@ -324,31 +424,22 @@ void UARTReceiveAndResponsePolling()
 
 }
 
-
 int16_t UARTReceiveIT()
 {
-	//store data last position
-	static uint32_t dataPos =0;
-
-	//create dummy data
-	int16_t data=-1;
-
-	//check pos in buffer vs last pos
-	if(huart2.RxXferSize - huart2.RxXferCount!=dataPos)
-	{
-		//read date from Buffer
-		data=RxDataBuffer[dataPos];
-
-		//move to next pos
-		dataPos= (dataPos+1)%huart2.RxXferSize;
-	}
-	return data;
+    static uint32_t dataPos =0;
+    int16_t data=-1;
+    if(huart2.RxXferSize - huart2.RxXferCount!=dataPos)
+    {
+        data=RxDataBuffer[dataPos];
+        dataPos= (dataPos+1)%huart2.RxXferSize;
+    }
+    return data;
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	sprintf(TxDataBuffer, "Received:[%s]\r\n", RxDataBuffer);
-	HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
+    sprintf(TxDataBuffer, "Received:[%s]\r\n", RxDataBuffer);
+    HAL_UART_Transmit(&huart2, (uint8_t)TxDataBuffer, strlen(TxDataBuffer), 1000);
 }
 
 /* USER CODE END 4 */
