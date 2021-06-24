@@ -287,19 +287,19 @@ int main(void)
 
 	  	  			}
 
-	  	  		if (CurrentMode == 40)
+	  	  		if (CurrentMode == Mode_Menu1)
 	  	  		{
 	  	  			if (ButtonStatus[0] == 0 && ButtonStatus[1] == 1)
 	  	  			{
 	  	  				char temp[] = "Button Status : PRESS\r\n";
 	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
-	  	  				CurrentMode = 40;
+	  	  				CurrentMode = Mode_Menu1;
 	  	  			}
 	  	  			else if (ButtonStatus[0] == 1 && ButtonStatus[1] == 0)
 	  	  			{
 	  	  				char temp[] = "Button Status : UNPRESS\r\n";
 	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
-	  	  				CurrentMode = 40;
+	  	  				CurrentMode = Mode_Menu1;
 	  	  			}
 	  	  		}
 
