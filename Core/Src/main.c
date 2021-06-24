@@ -128,20 +128,20 @@ int main(void)
 
 	  	  		/*Method 2 W/ 1 Char Received*/
 
-	  	  		//read charater
+	  	  		//read character
 	  	  	    int8_t inputchar = UARTReceiveIT();
 
 	  	  		//read button status
 	  	  		ButtonStatus[0] = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
 
-	  	  		if (inputchar != -1)
-	  	  		{
+//	  	  		if (inputchar != -1)
+//	  	  		{
 //	  	  			sprintf(TxDataBuffer, "ReceivedChar:[%c]\r\n", inputchar);
 //	  	  			HAL_UART_Transmit(&huart2, (uint8_t*)TxDataBuffer, strlen(TxDataBuffer), 1000);
-	  	  		}
+//	  	  		}
 	  	  		switch (CurrentMode)
 	  	  		{
-	  	  				case Mode_MainMenu :
+	  	  				case Mode_MainMenu :	//MainMENU
 	  	  				{
 	  	  					char temp[] = "\r\nMAIN MENU : \r\n"
 											"---------------\r\n"
@@ -182,7 +182,7 @@ int main(void)
 	  	  					}
 	  	  					break;
 
-	  	  				case Mode_Menu0 :
+	  	  				case Mode_Menu0 :	//MODE0
 	  	  				{
 	  	  					char temp[]="---------------\r\n"
 	  	  					"MENU 0 : LED CONTROL\r\n"
@@ -203,14 +203,14 @@ int main(void)
 	  	  					  	case -1 :	//no input
 	  	  					  	  	break;
 
-	  	  					  	case 'a' :
+	  	  					  	case 'a' :	//increase frequency
 	  	  					  		LEDFrequency += 1;
 	  	  					  		sprintf(temp, "Current Frequency : [%d]\r\n" , LEDFrequency);
 	  	  					  		HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
 	  	  					  		CurrentMode = Mode_Menu0;
 	  	  					  		break;
 
-	  	  					  	case 's' :
+	  	  					  	case 's' :	//decrease frequency
 	  	  					  		LEDFrequency -= 1;
 	  	  					  		if (LEDFrequency <= 0)
 	  	  					  		{
@@ -221,7 +221,7 @@ int main(void)
 									CurrentMode = Mode_Menu0;
 									break;
 
-	  	  					  	case 'd' :
+	  	  					  	case 'd' :	// ON/OFF LED still change the LED frequency
 	  	  					  		if (LEDState == 0)
 	  	  					  		{
 	  	  					  			LEDState = 1;
@@ -239,11 +239,11 @@ int main(void)
 	  	  					  			break;
 	  	  					  		}
 
-	  	  					  	case 'x' :
+	  	  					  	case 'x' :	//back
 	  	  					  		CurrentMode = Mode_MainMenu;
 	  	  					  		break;
 
-	  	  					  	default :
+	  	  					  	default :	//error
 	  	  					  		{
 	  	  					  			char temp[] = "\r\n\r\n!!!ERROR!!!\r\n\r\n";
 	  	  					  			HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
@@ -253,7 +253,7 @@ int main(void)
 	  	  					}
 	  	  					break;
 
-	  	  				case Mode_Menu1 :
+	  	  				case Mode_Menu1 :	//MODE1
 	  	  				{
 	  	  					char temp[]="---------------\r\n"
 									"MENU 1 : BUTTON STATUS\r\n"
@@ -265,16 +265,28 @@ int main(void)
 	  	  				}
 
 	  	  				case Mode_Menu1Wait:
+	  		  	  			if (ButtonStatus[0] == 0 && ButtonStatus[1] == 1)
+	  		  	  			{
+	  		  	  				char temp[] = "Button Status : PRESS\r\n";
+	  		  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  		  	  				CurrentMode = Mode_Menu1;
+	  		  	  			}
+	  		  	  			else if (ButtonStatus[0] == 1 && ButtonStatus[1] == 0)
+	  		  	  			{
+	  		  	  				char temp[] = "Button Status : UNPRESS\r\n";
+	  		  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
+	  		  	  				CurrentMode = Mode_Menu1;
+	  		  	  			}
 	  	  					switch(inputchar)
 	  	  					{
   	  					  		case -1 :	//no input
   	  					  			break;
 
-								case 'x':
+								case 'x':	//back
 									CurrentMode = Mode_MainMenu;
 									break;
 
-								default :
+								default :	//error
 								{
 									char temp[] = "\r\n\r\n!!!ERROR!!!\r\n\r\n";
 									HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
@@ -287,33 +299,17 @@ int main(void)
 
 	  	  			}
 
-	  	  		if (CurrentMode == Mode_Menu1)
-	  	  		{
-	  	  			if (ButtonStatus[0] == 0 && ButtonStatus[1] == 1)
-	  	  			{
-	  	  				char temp[] = "Button Status : PRESS\r\n";
-	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
-	  	  				CurrentMode = Mode_Menu1;
-	  	  			}
-	  	  			else if (ButtonStatus[0] == 1 && ButtonStatus[1] == 0)
-	  	  			{
-	  	  				char temp[] = "Button Status : UNPRESS\r\n";
-	  	  				HAL_UART_Transmit(&huart2, (uint8_t*)temp, strlen(temp),1000);
-	  	  				CurrentMode = Mode_Menu1;
-	  	  			}
-	  	  		}
-
-	  	  		if (LEDState == 1)
+	  	  		if (LEDState == 1)	//LED ON, blink the LED
 	  	  		{
 	  	  			HAL_Delay(500/LEDFrequency);		//millisecond
 	  	  			HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 	  	  		}
-	  	  		else if (LEDState == 0)
+	  	  		else if (LEDState == 0)	//LED OFF
 	  	  		{
 	  	  			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
 	  	  		}
 
-	  	  		ButtonStatus[1] = ButtonStatus[0];
+	  	  		ButtonStatus[1] = ButtonStatus[0];	//statepast>>statepresent
 
     /* USER CODE END WHILE */
 
